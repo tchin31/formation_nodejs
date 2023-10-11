@@ -1,0 +1,25 @@
+{
+  "name": "formation nodejs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tchin31/formation_nodejs.git"
+  },
+  "keywords": [],
+  "author": "Ayumi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tchin31/formation_nodejs/issues"
+  },
+  "homepage": "https://github.com/tchin31/formation_nodejs#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "lodash": "^4.17.21",
+    "pug": "^3.0.2"
+  }
+}
