@@ -1,11 +1,37 @@
-const express = require('express');
-const session = require('express-session');
-const path = require('path');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
+const express = require("express");
+const session = require("express-session");
+const path = require("path");
+const flash = require("express-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local").Strategy;
 // const crypto = require('crypto');
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
+//app.use(express.urlencoded({ extended: true }));
+// quand je soumet mon formulaire j'ai besoin de lui préciser qu'il doit accepter ce type de format
+// qui n'est pas du json mais du html en format urlencoded
+app.use(flash());
+// app.use(flash()) => permet d'avoir des messages de notification
+app.use(
+    session({
+        secret: "SECRET",
+        resave: false,
+        saveUninitialized: false,
+    })
+);
+//init passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// j'ai wrappé moi meme isAuthenticated de passport dans une autre fonction nommé isAuthenticated ,
+// comme ça je peux la passer en callback pour proteger une route (dans mon cas dashboard)
+const isAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.redirect("/login");
+};
 
 // use static code
 app.use(express.static(path.join(__dirname, "public")));
@@ -13,47 +39,37 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 // middleware CORS
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow_Methods', 'GET, POST, PUT, DELETE');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorisation');
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow_Methods", "GET, POST, PUT, DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorisation");
     next();
 });
 // config session
-app.use(session({
-    secret: 'SECRET',
-    resave: false,
-    saveUninitialized: false
-}))
-//init passport
-app.use(passport.initialize());
-app.use(passport.session());
 
 // template engine : pug
-app.set('view engine', 'pug');
-app.set('views', path.join(__dirname, 'views'));
-
+app.set("view engine", "pug");
+app.set("views", path.join(__dirname, "views"));
 
 // route simple
-app.get('/', (req, res) => {
-    res.send('Hello World !');
+app.get("/", (req, res) => {
+    res.send("Hello World !");
 });
 
 // home
-app.get('/home', (req, res) => {
-    res.render('home');
+app.get("/home", (req, res) => {
+    res.render("home");
 });
 
 // register
-app.get('/login', (req, res) => {
-    res.render('login');
+app.get("/login", (req, res) => {
+    res.render("login");
 });
 
 // TEST user
 const user = {
-    username: 'toto',
-    password: 'password' 
-}
-
+    username: "toto",
+    password: "password",
+};
 // config strategie locale (nom & mdp user)
 passport.use(
     new LocalStrategy((username, password, done) => {
@@ -62,43 +78,45 @@ passport.use(
                 return done(null, user);
             }
         } catch (err) {
-            return done(null, false);
-        }
-    })
+            return done(null, false, {
+                message: "Nom d'utilisateur ou mot de passe incorrect",
+                });
+            }
+        })
 );
 
 // serialisation de l'utilisateur pour le stocker en session
 passport.serializeUser((user, done) => {
-    done(null, user.id);
+    // mon user n'as pas d'id donc j'envoie l'username ou alors meme l'user complet
+    done(null, user.username);
 });
 // déseriarisation de l'utilisateur à partir de la session
 passport.deserializeUser((id, done) => {
     // recup user en utilisant l'ID session
-    // call done(null, user) or done(null, false)
+    // il manquais cette partie, pour désérialiser l'user, je renvoie un utilisateur test
+    //(attention : pas le meme nom que celui qui a se réussis à se co, c'est de la simulation)
+    const user = { name: "par défaut" };
+    done(null, user);
 });
 
-
 // route d'authentification
-app.post('/login',
-    passport.authenticate('local', {
-        successRedirect: '/dashboard',
-        failureRedirect: '/login'
+app.post(
+    "/login",
+    passport.authenticate("local", {
+        successRedirect: "/dashboard",
+        failureRedirect: "/login",
+        // accepte les message d'erreur quand l'authentification echoue
+        failureFlash: true,
     })
 );
 
-
 // dashboard
-app.get('/dashboard', (req, res) => {
-    if (req.isAuthenticated()) {
-        // res.send('Tableau de board');
-        res.render('dashboard');
-    } else {
-        res.redirect('/login');
-    }
+// isAuthenticated a mettre directement en deuxieme argument (fonction qui passe en callback)
+app.get("/dashboard", isAuthenticated, (req, res) => {
+    res.send("je suis sur le dashboard");
 });
 
 PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Listening port ${PORT}`);
 });
-
